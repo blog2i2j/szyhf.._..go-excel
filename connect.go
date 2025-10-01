@@ -106,9 +106,10 @@ func (conn *connect) Close() error {
 
 // NewReader generate an new reader of a sheet
 // sheetNamer: if sheetNamer is string, will use sheet as sheet name.
-//             if sheetNamer is int, will i'th sheet in the workbook, be careful the hidden sheet is counted. i ∈ [1,+inf]
-//             if sheetNamer is a object implements `GetXLSXSheetName()string`, the return value will be used.
-//             otherwise, will use sheetNamer as struct and reflect for it's name.
+//
+//	if sheetNamer is int, will i'th sheet in the workbook, be careful the hidden sheet is counted. i ∈ [1,+inf]
+//	if sheetNamer is a object implements `GetXLSXSheetName()string`, the return value will be used.
+//	otherwise, will use sheetNamer as struct and reflect for it's name.
 func (conn *connect) NewReader(sheetNamer interface{}) (Reader, error) {
 	return conn.NewReaderByConfig(&Config{Sheet: sheetNamer})
 }
@@ -231,7 +232,13 @@ func (conn *connect) readWorkbookRels() error {
 	for _, rel := range wbRels.Relationships {
 		if rel.Type == _RelTypeWorkSheet {
 			// Is a rels for worksheet
-			conn.workbookRelsIDMap[rel.ID] = _XL + rel.Target
+			// 如果是绝对路径，统一成后续业务使用的相对路径
+			if strings.HasPrefix(rel.Target, "/"+_XL) {
+				conn.workbookRelsIDMap[rel.ID] = strings.TrimPrefix(rel.Target, "/")
+			} else {
+				// more使用的相对路径
+				conn.workbookRelsIDMap[rel.ID] = _XL + rel.Target
+			}
 		}
 	}
 	// log.Println(conn.workbookRelsIDMap)
